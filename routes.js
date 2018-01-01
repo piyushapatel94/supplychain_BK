@@ -9,10 +9,10 @@ const fetchrequestid = require('./functions/fetchrequestid');
 const fetchinventory = require('./functions/fetchinventory');
 const readIndex = require('./functions/readIndex');
 const readAllRequest = require('./functions/readAllRequest');
-const getInventory= require('./functions/getInventory');
+const getInventory = require('./functions/getInventory');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
-var request = require('request');
+var request = require('request-promise');
 var mongoose = require('mongoose');
 var image = require('./models/documents');
 var dateTime = require('node-datetime');
@@ -235,7 +235,7 @@ module.exports = router => {
 
     });
 
- 
+
     router.post("/updateRequest", (req, res) => {
         console.log("Routing User Input to updateRequest Function.....!")
         var total, message1;
@@ -256,52 +256,86 @@ module.exports = router => {
                     console.log("lol----", result.query);
                     if (result.query.transactionlist[0].transactiondetails.status === "RequestInitiated" && result.query.transactionlist[0].transactiondetails.updatedby === "Manufacturer" && status === "DoDelievered") {
                         number = 1;
+                        
+
+                            fetchinventory.fetchinventory(itemname, quantity, number)
+                                .then((results) => {
+
+                                    updateQuantity.updateQuantity(itemname, results.total)
+                                        .then(Fresult => {
+
+                                            updateRequest.updateRequest(requestid, status, transactionString)
+
+                                                .then(result => {
+                                                    res
+                                                        .status(200)
+                                                        .json({
+                                                            "message": "REQUEST UPDATED",
+                                                            "status": "success"
+                                                        });
+                                                })
+                                        })
+                                })
+                                .catch(err => res.status(err.status).json({
+                                    message: err.message
+                                }));
+
+                       
 
                     } else if (result.query.transactionlist[0].transactiondetails.status === "RequestInitiated" && result.query.transactionlist[0].transactiondetails.updatedby === "retailer" && status === "DoDelievered") {
                         number = 2;
-                    }
-                    else{
-                        updateRequest.updateRequest(requestid, status, transactionString)
-                        
-                                                                .then(result => {
-                                                                    res.status(result.status).json({
-                                                                        message: result.message,
-                        
-                                                                    });
-                                                                })
-                    }
-                    fetchinventory.fetchinventory(itemname, quantity, number)
-                        .then((results) => {
+                                       
 
-                            updateQuantity.updateQuantity(itemname, results.total)
-                                .then(Fresult => {
+                            fetchinventory.fetchinventory(itemname, quantity, number)
+                                .then((results) => {
 
-                                    updateRequest.updateRequest(requestid, status, transactionString)
+                                    updateQuantity.updateQuantity(itemname, results.total)
+                                        .then(Fresult => {
 
-                                        .then(result => {
-                                            res.status(result.status).json({
-                                                message: result.message,
+                                            updateRequest.updateRequest(requestid, status, transactionString)
 
-                                            });
+                                                .then(result => {
+                                                    res
+                                                        .status(200)
+                                                        .json({
+                                                            "message": "REQUEST UPDATED",
+                                                            "status": "success"
+                                                        });
+                                                })
                                         })
-
                                 })
-                        })
+                                .catch(err => res.status(err.status).json({
+                                    message: err.message
+                                }));
+
                         
-                        .catch(err => res.status(err.status).json({
-                            message: err.message
-                        }).json({
-                            status: err.status
-                        }));
+                    } else {
+                      
+                                updateRequest.updateRequest(requestid, status, transactionString)
 
+                                    .then(result => {
+                                         res
+                                                        .status(200)
+                                                        .json({
+                                                            "message": "REQUEST UPDATED",
+                                                            "status": "success"
+                                                        });
 
+                                    })
+                                    .catch(err => res.status(err.status).json({
+                                        message: err.message
+                                    }))
 
+                    }
 
-                })
-        });
+                }).catch(err => res.status(err.status).json({
+                    message: err.message
+                }));
+
+        })
     })
 
-    
+
 
     // readRequest - query fetches user input given by user for newRequest.
     var readAlldata = [];
@@ -408,76 +442,76 @@ module.exports = router => {
             });
         }
     });
-    router.get("/getInventory", cors(), (req, res) =>{
-        
-            if (1 == 1) {
-                
-                
-                getInventory.getInventory({
+    router.get("/getInventory", cors(), (req, res) => {
+
+        if (1 == 1) {
+
+
+            getInventory.getInventory({
                     "user": "dhananjay.p",
                     "getusers": "getusers"
                 })
-                
+
                 .then(function(result) {
-                
+
                     return res.json({
                         "status": 200,
                         "message": result.query
                     });
-        
+
                 })
                 .catch(err => res.status(err.status).json({
                     message: err.message
                 }));
-                    } else  {
-                res.status(401).json({
+        } else {
+            res.status(401).json({
                 "status": false,
                 message: 'cant fetch data !'
-                 });
+            });
         }
-        
-        })
 
+    })
 
-        router.get("/readStatus", cors(), (req, res) => {
-            var statusList = [];
-            console.log("readstatus routes");
-            if (1 == 1) {
-                   
-                    if (requestList !== []) {
-                        var startKey = parseInt('0000');
-                        console.log("startKey", startKey);
-                        var endKey = 2 + parseInt(requestList[1].requestid);
-                        console.log("endKey--", endKey);
-        
-                    }
-                    readAllRequest.readAllRequest(startKey, endKey)
-                      
-                    .then(function(result) {
-                        console.log("result",result);
-                        console.log("length====",result.query.length);
-                        console.log("jujujuju----",result.query[0].Record.transactionlist[0].transactiondetails.status);
-                        
-                        for (let i = 0; i < result.query.length; i++) {
-                            console.log("for 1")
-                                console.log("dddd---",result.query[i].Record.transactionlist[0]);
-                            for(let j = 0; j < result.query[i].Record.transactionlist.length; j++){
+    router.get("/readStatus", cors(), (req, res) => {
+        var statusList = [];
+        console.log("readstatus routes");
+        if (1 == 1) {
+
+            if (requestList !== []) {
+                var startKey = parseInt('0000');
+                console.log("startKey", startKey);
+                var endKey = 2 + parseInt(requestList[1].requestid);
+                console.log("endKey--", endKey);
+
+            }
+            readAllRequest.readAllRequest(startKey, endKey)
+
+                .then(function(result) {
+                    console.log("result", result);
+                    console.log("length====", result.query.length);
+                    console.log("jujujuju----", result.query[0].Record.transactionlist[0].transactiondetails.status);
+
+                    for (let i = 0; i < result.query.length; i++) {
+                        console.log("for 1")
+                        console.log("dddd---", result.query[i].Record.transactionlist[0]);
+                        for (let j = 0; j < result.query[i].Record.transactionlist.length; j++) {
                             console.log("for2");
-                                if (result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestInitiated" || 
-                                result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestAccepted" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "QuotationRaised" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "quotationAccepted" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "purchaseorderRaised" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "deliveryorderRaised" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "shipped" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "doDelivered" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceRaised" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceApproved" ||  
-                            result.query[i].Record.transactionlist[j].transactiondetails.status== "paymentInitiated"|| 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceDecline" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "paymentPaid" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestRejected" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "quotationRejected") {
+                            if (result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestInitiated" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestAccepted" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "QuotationRaised" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "quotationAccepted" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "purchaseorderRaised" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "deliveryorderRaised" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "shipped" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "DoDelievered" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceRaised" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceApproved" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "paymentInitiated" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceDecline" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "paymentPaid" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestRejected" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "quotationRejected" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "Completed") {
                                 if (result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestInitiated") {
                                     statusList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                     console.log(statusList)
@@ -501,10 +535,10 @@ module.exports = router => {
                                 } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "deliveryorderRaised") {
                                     statusList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                     console.log(statusList)
-                                } else if (result.query[i].Record.transactionlist[j].transactiondetails.status== "shipped") {
+                                } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "shipped") {
                                     statusList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                     console.log(statusList)
-                                } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "doDeliver") {
+                                } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "DoDelievered") {
                                     statusList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                     console.log(statusList)
                                 } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceRaised") {
@@ -516,77 +550,79 @@ module.exports = router => {
                                 } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceDecline") {
                                     statusList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                     console.log(statusList)
-                                } else if (result.query[i].Record.transactionlist[j].transactiondetails.status== "paymentInitiated") {
+                                } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "paymentInitiated") {
                                     statusList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                     console.log(statusList)
-                                } else if (result.query[i].Record.transactionlist[j].transactiondetails.status== "paymentPaid") {
+                                } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "paymentPaid") {
                                     statusList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                     console.log(statusList)
+                                } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "Completed") {
+                                    statusList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
+                                    console.log(statusList)
+                                } else {
+                                    console.log("bada else kuch nai aaya")
                                 }
-                            else{
-                                console.log("bada else kuch nai aaya")
-                            }
-                            }
-                            else {
+                            } else {
                                 console.log("main kuch nai aaya")
                             }
 
-                    
+
                             var countstatus = count(statusList);
                             console.log("countstatus" + JSON.stringify(countstatus[0].statuscount));
                         }
-                    }    
-                        return res.json({
-                            "status": 200,
-                            statuscount: countstatus,
-                            //  open:open,
-                        });
-                    })
-                    .catch(err => res.status(err.status).json({
-                        message: err.message
-                    }));
-            } else {
-                res.status(401).json({
-                    "status": false,
-                    message: 'cant fetch data !'
-                });
+                    }
+                    return res.json({
+                        "status": 200,
+                        statuscount: countstatus,
+                        //  open:open,
+                    });
+                })
+                .catch(err => res.status(err.status).json({
+                    message: err.message
+                }));
+        } else {
+            res.status(401).json({
+                "status": false,
+                message: 'cant fetch data !'
+            });
+        }
+    });
+    router.get("/readCycle", cors(), (req, res) => {
+        var OpenList = [];
+        var ClosedList = [];
+        if (1 == 1) {
+
+            if (requestList !== []) {
+                var startKey = parseInt('0000');
+                console.log("startKey", startKey);
+                var endKey = 2 + parseInt(requestList[1].requestid);
+                console.log("endKey--", endKey);
+
             }
-        });
-        router.get("/readCycle", cors(), (req, res) => {
-            var OpenList = [];
-            var ClosedList = [];
-            if (1 == 1) {
-    
-                if (requestList !== []) {
-                    var startKey = parseInt('0000');
-                    console.log("startKey", startKey);
-                    var endKey = 2 + parseInt(requestList[1].requestid);
-                    console.log("endKey--", endKey);
-    
-                }
-                readAllRequest.readAllRequest(startKey, endKey)
-                  
-                    .then(function(result) {
-    
-                        for (let i = 0; i < result.query.length; i++) {
-    
-                            for(let j = 0; j < result.query[i].Record.transactionlist.length; j++){
-                            if (result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestInitiated" || 
-                                result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestAccepted" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "QuotationRaised" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "quotationAccepted" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "purchaseorderRaised" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "deliveryorderRaised" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "shipped" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "doDelivered" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceRaised" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceApproved" ||  
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "paymentInitiated"|| 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceDecline" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "paymentPaid" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestRejected" || 
-                            result.query[i].Record.transactionlist[j].transactiondetails.status == "quotationRejected") {
-                                
+            readAllRequest.readAllRequest(startKey, endKey)
+
+                .then(function(result) {
+
+                    for (let i = 0; i < result.query.length; i++) {
+
+                        for (let j = 0; j < result.query[i].Record.transactionlist.length; j++) {
+                            if (result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestInitiated" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestAccepted" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "QuotationRaised" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "quotationAccepted" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "purchaseorderRaised" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "deliveryorderRaised" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "shipped" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "DoDelievered" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceRaised" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceApproved" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "paymentInitiated" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceDecline" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "paymentPaid" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestRejected" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "quotationRejected" ||
+                                result.query[i].Record.transactionlist[j].transactiondetails.status == "Completed") {
+
                                 if (result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestInitiated") {
                                     OpenList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                 } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestAccepted") {
@@ -601,7 +637,7 @@ module.exports = router => {
                                     OpenList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                 } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "shipped") {
                                     OpenList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
-                                } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "doDelivered") {
+                                } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "DoDelievered") {
                                     OpenList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                 } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceRaised") {
                                     OpenList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
@@ -610,16 +646,18 @@ module.exports = router => {
                                 } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "paymentInitiated") {
                                     OpenList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                 } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "invoiceDecline") {
-                                    ClosedList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
+                                    OpenList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                 } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "paymentPaid") {
-                                    ClosedList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
+                                    OpenList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                 } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "RequestRejected") {
                                     ClosedList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                 } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "quotationRejected") {
                                     ClosedList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
+                                } else if (result.query[i].Record.transactionlist[j].transactiondetails.status == "Completed") {
+                                    ClosedList.push(result.query[i].Record.transactionlist[j].transactiondetails.status);
                                 }
                             }
-    
+
                             var countstatus = count(OpenList);
                             var countstatus1 = count(ClosedList);
                             var Ostatus = [];
@@ -640,81 +678,145 @@ module.exports = router => {
                             console.log("CStatus", sum1);
                         }
                     }
-    
-                        return res.json({
-                            "status": 200,
-                            openStatus: sum,
-                            closedStatus: sum1
-                        });
-                    })
-                    .catch(err => res.status(err.status).json({
-                        message: err.message
-                    }));
-            } else {
-                res.status(401).json({
-                    "status": 401,
-                    message: 'cant fetch data !'
-                });
-            }
-        });
-   //to filter get purchase order request for tracking
-   var trackingdata =[];
-   router.get("/readtrackingdata",cors(), (req, res) => {
-    console.log("requestList ----readAllrequest",requestList);
-    if (1 == 1) {
-        if(requestList !== []){  
-       var startKey = parseInt('0000');
-        console.log("startKey",startKey);
-        var endKey = 2 + parseInt(requestList[1].requestid);
-        console.log("endKey--", endKey);
-      
-      }
-        readAllRequest.readAllRequest(startKey,endKey)
-    .then(function(result) {
 
-       for (let i = 0; i < result.query.length; i++) {
-            
-        for(let j = 0; j < result.query[i].Record.transactionlist.length; j++){
-               if (result.query[i].Record.transactionlist[j].transactiondetails.status == "purchaseorderRaised"){
-                trackingdata.push(result.query);
-                console.log("trackingdata"+trackingdata);
-                console.log("in if")     
-                   } else{
                     return res.json({
                         "status": 200,
-                        "data":"No request available"
+                        openStatus: sum,
+                        closedStatus: sum1
                     });
+                })
+                .catch(err => res.status(err.status).json({
+                    message: err.message
+                }));
+        } else {
+            res.status(401).json({
+                "status": 401,
+                message: 'cant fetch data !'
+            });
+        }
+    });
+    //to filter get purchase order request for tracking
+    // var trackingdata =[];
+    router.get("/readtrackingdata", cors(), (req, res) => {
+        console.log("requestList ----readAllrequest", requestList);
+        var trackingdata = [];
+        if (1 == 1) {
+            if (requestList !== []) {
+                var startKey = parseInt('0000');
+                console.log("startKey", startKey);
+                var endKey = 2 + parseInt(requestList[1].requestid);
+                console.log("endKey--", endKey);
 
-                   }
+            }
+            readAllRequest.readAllRequest(startKey, endKey)
+                .then(function(result) {
+                    console.log("result.query", result.query.length);
+                    for (let i = 0; i < result.query.length; i++) {
+                        console.log("in for1");
+                        console.log(result.query[i].Record.transactionlist, "=======pppfgoijrgi");
+                        for (let j = 0; j < result.query[i].Record.transactionlist.length; j++) {
+
+                            var mystatus = result.query[i].Record.transactionlist[j].transactiondetails.status;
+                            console.log(mystatus, "=======mystatus");
+                            if (mystatus === "purchaseorderRaised") {
+                                console.log("in if");
+                                trackingdata.push(result.query[i]);
+
+                                console.log("trackingdata" + trackingdata);
+                                console.log("in if");
+                            }
+                            /*else{
+                                               return res.json({
+                                                   "status": 200,
+                                                   "data":"No request available"
+                                               });
+
+                                              }*/
+                        }
+
                     }
-                  
-                }
-            
-                 return res.json({
-                     "status": 200,
-                     "data":trackingdata
-                 });
-             })
-     .catch(err => res.status(err.status).json({
-         message: err.message
-     }));
-    }else {
-        res.status(401).json({
-            "status": false,
-            message: 'cant fetch data !'
-        });
-    }
-});     
+
+                    return res.json({
+                        "status": 200,
+                        "data": trackingdata
+                    });
+                })
+                .catch(err => res.status(err.status).json({
+                    message: err.message
+                }));
+        } else {
+            res.status(401).json({
+                "status": false,
+                message: 'cant fetch data !'
+            });
+        }
+    });
+    //delivery order overview
+     router.get("/readdeliveryOrder", cors(), (req, res) => {
+        console.log("requestList ----readAllrequest", requestList);
+        var trackingdata = [];
+        if (1 == 1) {
+            if (requestList !== []) {
+                var startKey = parseInt('0000');
+                console.log("startKey", startKey);
+                var endKey = 2 + parseInt(requestList[1].requestid);
+                console.log("endKey--", endKey);
+
+            }
+            readAllRequest.readAllRequest(startKey, endKey)
+                .then(function(result) {
+                    console.log("result.query", result.query.length);
+                    for (let i = 0; i < result.query.length; i++) {
+                        console.log("in for1");
+                        console.log(result.query[i].Record.transactionlist, "=======from read delivery");
+                        for (let j = 0; j < result.query[i].Record.transactionlist.length; j++) {
+
+                            var mystatus = result.query[i].Record.transactionlist[j].transactiondetails.status;
+                            console.log(mystatus, "=======mystatus");
+                            if (mystatus === "deliveryorderRaised") {
+                                console.log("in if");
+                                trackingdata.push(result.query);
+
+                                console.log("trackingdata" + trackingdata);
+                                console.log("in if");
+                            }
+                            /*else{
+                                               return res.json({
+                                                   "status": 200,
+                                                   "data":"No request available"
+                                               });
+
+                                              }*/
+                        }
+
+                    }
+
+                    return res.json({
+                        "status": 200,
+                        "data": trackingdata
+                    });
+                })
+                .catch(err => res.status(err.status).json({
+                    message: err.message
+                }));
+        } else {
+            res.status(401).json({
+                "status": false,
+                message: 'cant fetch data !'
+            });
+        }
+    });
     // uploadDocs - uploads files to cloudinary server.
 
-    router.post('/UploadDocs', multipartMiddleware, function(req, res, next) {
+    router.post('/UploadDocs', multipartMiddleware, cors(),function(req, res, next) {
         var url;
         console.log("req.files.image" + JSON.stringify(req.files));
         var imageFile = req.files.file.path;
-
+        console.log("imageFile",imageFile);
 
         cloudinary.uploader.upload(imageFile, {
-                tags: 'express_sample'
+                tags: 'express_sample',
+                resource_type :"raw"
             })
 
             .then(function(image) {
@@ -727,8 +829,13 @@ module.exports = router => {
                     url: url,
                     message: "files uploaded succesfully"
                 })
-            });
-
+            })
+            .catch(err =>
+             
+             res.status(err.status).json({
+               
+                    message: "not sucess"
+                }));
 
     })
 
@@ -800,7 +907,7 @@ module.exports = router => {
         }
 
         return result;
-        authorization
+
     }
 
     function checkToken(req) {
@@ -952,7 +1059,28 @@ module.exports = router => {
             }
         });
     });
+    //---------------new weather api-------
+    router.post('/weatherdata', function(req, res) {
+        var location1 = req.body.location;
+        console.log(location1)
+        const options = {
+            method: 'POST',
+            uri: 'https://api.openweathermap.org/data/2.5/weather?q=' + location1 + '&appid=ec00b38b419c8d7924c32f7fbe9ccbe9'
+        }
+        request(options)
+            .then(function(response) {
+                const data = (JSON.parse(response));
 
+                res.status(200).json({
+                    message: data
+
+                });
+
+            })
+            .catch(err => res.status(err.status).json({
+                message: err.message
+            }))
+    });
 
     //------------mock webservice for inventory details--------
     router.get("/mock/InventoryDetails", (req, res) => {
@@ -1206,7 +1334,7 @@ module.exports = router => {
             ]
 
         })
-    
+
 
 
     })

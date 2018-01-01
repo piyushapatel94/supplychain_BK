@@ -2,7 +2,7 @@
 
 const request = require('../models/requestid');
 
-exports.saveRequestId = (requestid,randomNo1) => new Promise((resolve, reject) => {
+exports.saveRequestId = (requestid,randomNo1) =>{return new Promise((resolve, reject) => {
     console.log("requestid1 in savereq"+requestid)
 
    
@@ -33,3 +33,4 @@ exports.saveRequestId = (requestid,randomNo1) => new Promise((resolve, reject) =
             }
         });
 });
+}
